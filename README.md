@@ -102,4 +102,4 @@ All training and validation metrics were logged using Weights & Biases (wandb), 
 - Validation loss and accuracy  
 - Learning rate schedule
 
-[Link to WANDB website](https://wandb.ai/miruyoun-boston-university/-sp25-ds542-challenge?nw=nwusermiruyoun)
+[Link to WANDB website](https://api.wandb.ai/links/miruyoun-boston-university/gpqtkp5g)
