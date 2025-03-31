@@ -12,23 +12,39 @@ import wandb
 import json
 
 ################################################################################
-# Model Definition (Simple Example - You need to complete)
-# For Part 1, you need to manually define a network.
-# For Part 2 you have the option of using a predefined network and
-# for Part 3 you have the option of using a predefined, pretrained network to
-# finetune.
+# Part 2: Predefined ResNet Model
 ################################################################################
-class SimpleCNN(nn.Module):
-    def __init__(self):
-        super(SimpleCNN, self).__init__()
-        # TODO - define the layers of the network you will use
-        ...
-    
-    def forward(self, x):
-        # TODO - define the forward pass of the network you will use
-        ...
+class ResNet(nn.Module):
+    def __init__(self, num_classes=100):
+        super(ResNet, self).__init__()
 
-        return x
+        # Load ResNet34 architecture without pretrained weights
+        self.model = torchvision.models.resnet34(weights=None)
+
+        # Modify the first convolution to better suit small CIFAR-100 images
+        # Original ResNet34 expects 224x224 input, so we reduce stride and use smaller kernel
+        self.model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+
+        # Replace the default average pooling with adaptive pooling for consistent output size
+        self.model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+        # Fully connected layer
+        # Adds dropout and two intermediate layers to improve generalization on CIFAR-100
+        self.fc = nn.Sequential(
+            nn.Linear(self.model.fc.in_features, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.3),
+            nn.Linear(256, num_classes)  # Output layer for 100 classes
+        )
+
+        self.model.fc = self.fc
+
+    def forward(self, x):
+        # Forward the input through the modified ResNet34
+        return self.model(x)
 
 ################################################################################
 # Define a one epoch training function
@@ -51,10 +67,18 @@ def train(epoch, model, trainloader, optimizer, criterion, CONFIG):
         inputs, labels = inputs.to(device), labels.to(device)
 
         ### TODO - Your code here
-        ...
 
-        running_loss += ...   ### TODO
-        _, predicted = ...    ### TODO
+        ### Forward pass
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+
+        ### Backward pass and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        running_loss += loss.item()   ### TODO
+        _, predicted = outputs.max(1)    ### TODO
 
         total += labels.size(0)
         correct += predicted.eq(labels).sum().item()
@@ -87,11 +111,11 @@ def validate(model, valloader, criterion, device):
             # move inputs and labels to the target device
             inputs, labels = inputs.to(device), labels.to(device)
 
-            outputs = ... ### TODO -- inference
-            loss = ...    ### TODO -- loss calculation
+            outputs = model(inputs) ### TODO -- inference
+            loss = criterion(outputs, labels)    ### TODO -- loss calculation
 
-            running_loss += ...  ### SOLUTION -- add loss from this sample
-            _, predicted = ...   ### SOLUTION -- predict the class
+            running_loss += loss.item()  ### SOLUTION -- add loss from this sample
+            _, predicted = outputs.max(1)   ### SOLUTION -- predict the class
 
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
@@ -108,16 +132,13 @@ def main():
     ############################################################################
     #    Configuration Dictionary (Modify as needed)
     ############################################################################
-    # It's convenient to put all the configuration in a dictionary so that we have
-    # one place to change the configuration.
-    # It's also convenient to pass to our experiment tracking tool.
 
 
     CONFIG = {
-        "model": "MyModel",   # Change name when using a different model
-        "batch_size": 8, # run batch size finder to find optimal batch size
+        "model": "ResNet",   # Change name when using a different model
+        "batch_size": 128, # run batch size finder to find optimal batch size
         "learning_rate": 0.1,
-        "epochs": 5,  # Train for longer in a real scenario
+        "epochs": 10,  # Train for longer in a real scenario
         "num_workers": 4, # Adjust based on your system
         "device": "mps" if torch.backends.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu",
         "data_dir": "./data",  # Make sure this directory exists
@@ -135,8 +156,11 @@ def main():
     ############################################################################
 
     transform_train = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), # Example normalization
+        transforms.RandomCrop(32, padding=4),  # Randomly crop 32x32 patches with 4-pixel padding to simulate zoom and translation
+        transforms.RandomHorizontalFlip(p=0.5),  # Horizontally flip images with 50% probability
+        transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.05),  # Slightly adjust brightness, contrast, saturation, and hue
+        transforms.ToTensor(),  # Convert images to PyTorch tensors
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),  # Normalize using CIFAR-100 dataset statistics
     ])
 
     ###############
@@ -144,7 +168,10 @@ def main():
     ###############
 
     # Validation and test transforms (NO augmentation)
-    transform_test = ...   ### TODO -- BEGIN SOLUTION
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)),
+    ])
 
     ############################################################################
     #       Data Loading
@@ -154,22 +181,26 @@ def main():
                                             download=True, transform=transform_train)
 
     # Split train into train and validation (80/20 split)
-    train_size = ...   ### TODO -- Calculate training set size
-    val_size = ...     ### TODO -- Calculate validation set size
-    trainset, valset = ...  ### TODO -- split into training and validation sets
+    train_size = int(0.8 * len(trainset))   ### TODO -- Calculate training set size
+    val_size = len(trainset) - train_size     ### TODO -- Calculate validation set size
+    trainset, valset = torch.utils.data.random_split(trainset, [train_size, val_size])  ### TODO -- split into training and validation sets
 
     ### TODO -- define loaders and test set
-    trainloader = ...
-    valloader = ...
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=CONFIG["batch_size"], 
+                                              shuffle=True, num_workers=CONFIG["num_workers"])
+    valloader = torch.utils.data.DataLoader(valset, batch_size=CONFIG["batch_size"], 
+                                            shuffle=False, num_workers=CONFIG["num_workers"])
 
     # ... (Create validation and test loaders)
-    testset = ...
-    testloader = ...
+    testset = torchvision.datasets.CIFAR100(root='./data', train=False,
+                                            download=True, transform=transform_test)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=CONFIG["batch_size"], 
+                                             shuffle=False, num_workers=CONFIG["num_workers"])
     
     ############################################################################
     #   Instantiate model and move to target device
     ############################################################################
-    model = ...   # instantiate your model ### TODO
+    model = ResNet()   # instantiate your model ### TODO
     model = model.to(CONFIG["device"])   # move it to target device
 
     print("\nModel summary:")
@@ -190,9 +221,9 @@ def main():
     ############################################################################
     # Loss Function, Optimizer and optional learning rate scheduler
     ############################################################################
-    criterion = ...   ### TODO -- define loss criterion
-    optimizer = ...   ### TODO -- define optimizer
-    scheduler = ...  # Add a scheduler   ### TODO -- you can optionally add a LR scheduler
+    criterion = nn.CrossEntropyLoss() # CrossEntropyLoss is suitable for multi-class classification
+    optimizer = torch.optim.SGD(model.parameters(), lr=CONFIG["learning_rate"], momentum=0.9, weight_decay=5e-4) # SGD optimizer with momentum for faster convergence and weight decay for regularization
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=CONFIG["epochs"]) # Cosine annealing scheduler lowers the learning rate following a cosine curve
 
 
     # Initialize wandb
@@ -223,7 +254,7 @@ def main():
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             torch.save(model.state_dict(), "best_model.pth")
-            wandb.save("best_model.pth") # Save to wandb as well
+            # wandb.save("best_model.pth") # Save to wandb as well
 
     wandb.finish()
 
