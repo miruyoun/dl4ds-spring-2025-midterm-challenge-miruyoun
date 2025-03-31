@@ -1,99 +1,103 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/xnB1OI0j)
 # DS542 Deep Learning for Data Science -- Spring 2025 Midterm Challenge
 
-## Overview
+## AI Disclosure
 
-This repository contains the code for the midterm challenge of the course DS542 Deep Learning for Data Science.
+This submission was created with the assistance of ChatGPT.
 
-The challenge is in three parts:
-1. **Part 1 -- Simple CNN:** Define a relatively simple CNN model and train it on the CIFAR-100 dataset to
-    get a complete pipeline and establish baseline performance.
-2. **Part 2 -- More Sophisticated CNN Models:** Use a more sophisticated model, including predefined models from torchvision
-   to train and evaluate on CIFAR-100.
-3. **Part 3 -- Transfer Learning from a Pretrained Model:** Pretrain a model, or use one of the pretrained models from torchvision, and
-   fine-tune it on CIFAR-100. Try to beat the best benchmark performance on the leaderboard.
+**AI Contributions:**
+- Provided guidance on architecture design and PyTorch module usage.
+- Advised on how to implement features such as early stopping and LR scheduler.
+- Provided assistance on how CNN and ResNet work.
+- Helped ensure the code aligned with assignment rubric requirements.
 
-All your models should be built from linear and convoultional layers, as well as pooling, etc. We haven't covered Transformers yet,
-so don't use Transformer architectures.
+**My Contributions:**
+- Wrote the convolutional layers and implemented the forward pass.
+- Modified and finalized hyperparameter values.
+- Modified and applied the data augmentation.
 
-There is example starter template in `starter_code.py` which includes evaluation and submissions generation code. We suggest
-you copy and revise that code for each of the three parts above. In other words, your repo should have (at least) the three
-files, one for each part described above, as well as any supporting files.
 
-For each part, submit the results to the Kaggle [leaderboard](https://www.kaggle.com/t/3551aa4f562f4b79b93204b11ae640b4).
 
-Your best result needs beat the best benchmark performance of 0.397 on the leaderboard.
+## Model Description
 
-Use Weights and Biases experiment tracking tool to track your experiments. Create
-a free student account at [WandB](https://wandb.ai). The starter code is already
-instrumented for WandB, so it will start tracking experiments right away.
+**Simple CNN:** A custom convolutional neural network from scratch using PyTorch.  
+- Three convolutional layers with increasing filter counts (32, 64, 128).  
+- Each convolutional layer is followed by ReLU activation and 2x2 max pooling.  
+- After the final convolution, the feature map is flattened and passed through two fully connected layers.  
 
-You can write your report using the WandB Reports UI if you wish.
+**Predefined ResNet Model:** A modified ResNet34 architecture. The model was modified to adapt to CIFAR-100's smaller input resolution and classification complexity  
+- Replaced the first convolutional layer with a 3x3 kernel, stride 1, and padding 1.  
+- Replaced max pool with adaptive average pooling.  
+- Replaced the fully connected layer with a custom head  
+      o Linear → ReLU → Dropout(0.3)  
+      o Linear → ReLU → Dropout(0.3)  
+      o Final Linear output layer with 100 output classes  
 
-## Data
+**Predefined ResNet Model with Pretrained Weights:**  
+- Same architecture was kept however, I introduced default training weights.
 
-You will start with the CIFAR-100 dataset, which is downloaded and installed the
-first time your successfully run the sample code, `starter_code.py`.
 
-It should install into the `data/cifar-100-python` directory.
 
-We also have the challenge images in `data/ood-test` directory. Those are used
-to make predictions on the challenge images with your model and produce the 
-submission file.
+## Hyperparameter Tuning
 
-## Setup
+**Simple CNN:** Values were  
+- Learning rate: 0.1  
+- Batch size: 512 (determined empirically based on system memory)  
+- Epoch: 5  
 
-Fork this repository to your GitHub account and clone it to your local machine
-or to the SCC.
+**Predefined ResNet Model:**  
+- Learning rate: 0.1  
+- Batch size: 128 (For speed and stability)  
+- Epoch: 10  
 
-On MacOS and Linux, you can create a virtual environment and install the
-dependencies with the following commands:
+**Predefined ResNet Model with Pretrained Weights:**  
+- Learning rate: 0.001  
+- Batch size: 128  
+- Epoch: 50  
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-```
 
-## Report
 
-In addition to the code, we require a short report that includes:
+## Regularization Techniques
 
-* **AI Disclosure:** You are allowed to use AI assistance for this assignment, but you are required to:
-    * Explain how you used AI, e.g. Copilot, Cursor, ChatGPT, etc.
-    * Enumerate in detail which parts of the code were written by you and which were written with AI assistance.
-    * Have detailed code comments explaining what every part of your code does. This can be in the codebase itself.
-    * **Failure to disclose how you used AI may result in a score of 0 for the assignment.**
-* **Model Description:** Detailed explanation of the chosen architecture, including justifications for design choices.
-* **Hyperparameter Tuning:** Description of the hyperparameter search process and the final chosen values.
-* **Regularization Techniques:** Explanation of the regularization methods used and their impact.
-* **Data Augmentation Strategy:** Description of the data augmentation techniques used.
-* **Results Analysis:** Discussion of the results, including strengths and weaknesses of the model, and potential areas for improvement.
-* **Experiment Tracking Summary:**  Include screenshots or summaries from the experiment tracking tool.
-  You can use the WandB Reports UI to create a report as well.
+**Simple CNN:**  
+- Weight decay was added to the optimizer.  
+- Cosine Annealing scheduler helped lower LR over time.  
 
-## Grading Rubric
+**Predefined ResNet Model:**  
+- Same as Simple CNN however a dropout layer was added to improve generalization  
 
-The grading rubric is as follows:
+**Predefined ResNet Model with Pretrained Weights:**  
+- Same as Predefined ResNet Model  
 
-* **Code Quality (30%):**
-    * Correctness of implementation.
-    * Readability and organization of code.
-    * Use of PyTorch best practices.
-    * Efficiency of data loading and processing.
-* **Model Performance (40%):**
-    * Performance on the primary evaluation metric.
-    * Ranking on the leaderboard of at least above 0.397
-    * List the leaderboard performance, identifier and username for the best scores for each of the three parts of the assignment.
-* **Experiment Tracking and Report (30%):**
-    * Comprehensive AI disclosure statement.
-    * Completeness and clarity of the report.
-    * Thoroughness of experiment tracking.
-    * Justification of design choices.
-    * Analysis of results.
-    * Ablation study (if included).
 
-## Bonus Points (Optional)
 
-The top 10 students on the Private leaderboard will receive bonus points.
+## Data Augmentation Strategy
+
+**SimpleCNN:** Only minimal augmentation was applied:  
+- ToTensor(), Convert images to PyTorch tensors  
+- Normalize(mean=0.5, std=0.5) Centers pixel values  
+
+**Predefined ResNet Model:**  
+- RandomCrop(32, padding=4), Simulate zoom and translation  
+- RandomHorizontalFlip(p=0.5), Horizontally flip images  
+- RandomRotation(20), Random rotation  
+- ToTensor(), Convert images to PyTorch tensors  
+- Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)), New normalization  
+
+**Predefined ResNet Model with Pretrained Weights**  
+- Same as Predefined ResNet Model  
+
+
+
+## Results Analysis
+
+The Simple CNN and predefined ResNet models were relatively fast to train and easy to tune; however, that came at the cost of having poor accuracy in both training, validation, and test datasets. With the predefined model and pretrained weights, I was able to beat the baseline however, with only about mid 40% accuracy on test datasets. Potential areas of improvements could be trying deeper models, better data augmentations and training on more epochs.
+
+
+
+## Experiment Tracking Summary
+
+All training and validation metrics were logged using Weights & Biases (wandb), including:  
+- Training loss and accuracy  
+- Validation loss and accuracy  
+- Learning rate schedule 
