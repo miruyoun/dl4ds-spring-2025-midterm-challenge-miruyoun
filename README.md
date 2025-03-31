@@ -100,4 +100,6 @@ The Simple CNN and predefined ResNet models were relatively fast to train and ea
 All training and validation metrics were logged using Weights & Biases (wandb), including:  
 - Training loss and accuracy  
 - Validation loss and accuracy  
-- Learning rate schedule 
+- Learning rate schedule
+
+[Link to WANDB website](https://wandb.ai/miruyoun-boston-university/-sp25-ds542-challenge?nw=nwusermiruyoun)
